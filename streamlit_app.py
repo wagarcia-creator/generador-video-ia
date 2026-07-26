@@ -2,19 +2,18 @@ import streamlit as st
 from openai import OpenAI
 
 # Configuración de la página
-st.set_page_config(page_title="Traductor y Voz IA", page_icon="🎙️", layout="wide")
+st.set_page_config(page_title="Estudio de Narración IA", page_icon="🎙️", layout="wide")
 
 st.title("🎙️ Tu Estudio de Narración IA")
-st.write("Escribe tu guion en inglés, tradúcelo y genera una voz humana profesional para tus casos.")
+st.write("Genera narraciones de alta calidad en inglés y español para tus documentales de misterio.")
 
-# Barra lateral para configuraciones
+# Barra lateral
 with st.sidebar:
     st.header("🔑 Configuración")
     openai_key = st.text_input("Ingresa tu OpenAI API Key:", type="password")
-    st.info("Obtén tu API Key en platform.openai.com/api-keys")
+    st.info("Recarga saldo y obtén tu API Key en platform.openai.com")
     
     st.markdown("---")
-    # Selección de voz
     st.subheader("🗣️ Elige el tono de voz")
     voz_seleccionada = st.selectbox(
         "Voces disponibles:",
@@ -25,49 +24,69 @@ with st.sidebar:
 # Área principal
 guion_ingles = st.text_area(
     "1. Escribe tu guion en Inglés:", 
-    placeholder="Ej: The case remained unsolved for 20 years, until one night...",
+    placeholder="Ej: The evidence was hidden for decades...",
     height=150
 )
 
 col1, col2 = st.columns(2)
 
-# Columna de Traducción
+# Columna Izquierda: Acciones en Inglés y Traducción
 with col1:
-    if st.button("🇺🇸 ➡️ 🇪🇸 Traducir Guion al Español Neutro"):
+    # Botón para audio en Inglés
+    if st.button("🎙️ Generar Audio (Inglés)"):
         if not openai_key:
             st.error("⚠️ Falta tu API Key de OpenAI.")
         elif not guion_ingles:
             st.warning("⚠️ Escribe el guion primero.")
         else:
-            with st.spinner("Traduciendo como un experto..."):
+            with st.spinner("Grabando voz en inglés..."):
+                try:
+                    client = OpenAI(api_key=openai_key)
+                    response = client.audio.speech.create(
+                        model="tts-1",
+                        voice=voz_seleccionada,
+                        input=guion_ingles
+                    )
+                    audio_path_en = "narracion_en.mp3"
+                    response.stream_to_file(audio_path_en)
+                    st.success("¡Audio en inglés listo!")
+                    st.audio(audio_path_en)
+                    with open(audio_path_en, "rb") as file:
+                        st.download_button(label="📥 Descargar MP3 (Inglés)", data=file, file_name="narracion_ingles.mp3", mime="audio/mp3")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+    st.markdown("---")
+    
+    # Botón para traducir
+    if st.button("🇺🇸 ➡️ 🇪🇸 Traducir Guion al Español Neutro"):
+        if not openai_key:
+            st.error("⚠️ Falta tu API Key.")
+        elif not guion_ingles:
+            st.warning("⚠️ Escribe el guion primero.")
+        else:
+            with st.spinner("Traduciendo como un experto documental..."):
                 try:
                     client = OpenAI(api_key=openai_key)
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
-                            {"role": "system", "content": "Eres un narrador experto de misterio. Traduce este texto al español neutro manteniendo el tono de suspenso y documental."},
+                            {"role": "system", "content": "Eres un narrador experto de misterio. Traduce este texto al español neutro manteniendo el tono de suspenso documental."},
                             {"role": "user", "content": guion_ingles}
                         ]
                     )
                     st.session_state['traduccion'] = response.choices[0].message.content
-                    st.success("¡Traducción lista!")
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-guion_espanol = st.session_state.get('traduccion', "")
-
-if guion_espanol:
-    st.text_area("2. Guion en Español:", value=guion_espanol, height=150, disabled=True)
-
-# Columna de Audio
+# Columna Derecha: Resultado en Español y su Audio
 with col2:
-    if st.button("🎙️ Generar Pista de Audio"):
-        if not openai_key:
-            st.error("⚠️ Falta tu API Key de OpenAI.")
-        elif not guion_espanol:
-            st.warning("⚠️ Necesitas traducir un guion primero.")
-        else:
-            with st.spinner("Grabando voz... (esto es muy rápido)"):
+    guion_espanol = st.session_state.get('traduccion', "")
+    st.text_area("2. Guion en Español:", value=guion_espanol, height=150, disabled=True)
+    
+    if guion_espanol:
+        if st.button("🎙️ Generar Audio (Español)"):
+            with st.spinner("Grabando voz en español..."):
                 try:
                     client = OpenAI(api_key=openai_key)
                     response = client.audio.speech.create(
@@ -75,20 +94,11 @@ with col2:
                         voice=voz_seleccionada,
                         input=guion_espanol
                     )
-                    
-                    audio_path = "narracion.mp3"
-                    response.stream_to_file(audio_path)
-                    
-                    st.success("¡Pista de audio lista para descargar!")
-                    st.audio(audio_path)
-                    
-                    with open(audio_path, "rb") as file:
-                        st.download_button(
-                            label="📥 Descargar MP3",
-                            data=file,
-                            file_name="narracion_caso.mp3",
-                            mime="audio/mp3",
-                            use_container_width=True
-                        )
+                    audio_path_es = "narracion_es.mp3"
+                    response.stream_to_file(audio_path_es)
+                    st.success("¡Audio en español listo!")
+                    st.audio(audio_path_es)
+                    with open(audio_path_es, "rb") as file:
+                        st.download_button(label="📥 Descargar MP3 (Español)", data=file, file_name="narracion_espanol.mp3", mime="audio/mp3")
                 except Exception as e:
                     st.error(f"Error: {e}")
