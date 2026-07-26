@@ -1,5 +1,14 @@
+import os
+import sys
+
+# Forzar la instalación de replicate si no está presente
+try:
+    import replicate
+except ImportError:
+    os.system(f"{sys.executable} -m pip install replicate")
+    import replicate
+
 import streamlit as st
-import replicate
 
 # Configuración principal de la interfaz
 st.set_page_config(page_title="Mi Generador de Video IA", page_icon="🎬", layout="wide")
@@ -32,7 +41,6 @@ if st.button("🚀 Generar Video"):
             st.info("🧠 Procesando tu prompt y conectando con los servidores de video...")
             
             with st.spinner("Generando clip de video con IA... (esto toma entre 1 y 2 minutos)"):
-                # Generación de video usando el modelo Minimax vía Replicate
                 output = client.run(
                     "minimax/video-01",
                     input={
