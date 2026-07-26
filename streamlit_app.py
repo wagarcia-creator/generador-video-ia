@@ -1,11 +1,11 @@
-import os
+import subprocess
 import sys
 
-# Forzar la instalación de replicate si no está presente
+# Instalación forzada en tiempo de ejecución
 try:
     import replicate
 except ImportError:
-    os.system(f"{sys.executable} -m pip install replicate")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "replicate"])
     import replicate
 
 import streamlit as st
