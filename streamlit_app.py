@@ -1,14 +1,5 @@
-import subprocess
-import sys
-
-# Instalación forzada en tiempo de ejecución
-try:
-    import replicate
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "replicate"])
-    import replicate
-
 import streamlit as st
+import replicate
 
 # Configuración principal de la interfaz
 st.set_page_config(page_title="Mi Generador de Video IA", page_icon="🎬", layout="wide")
