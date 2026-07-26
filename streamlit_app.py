@@ -1,47 +1,94 @@
 import streamlit as st
-import replicate
+from openai import OpenAI
 
-# Configuración principal de la interfaz
-st.set_page_config(page_title="Mi Generador de Video IA", page_icon="🎬", layout="wide")
+# Configuración de la página
+st.set_page_config(page_title="Traductor y Voz IA", page_icon="🎙️", layout="wide")
 
-st.title("🎬 Tu Generador Personal de Video por IA")
-st.write("Escribe una idea en texto y la IA creará las escenas en video.")
+st.title("🎙️ Tu Estudio de Narración IA")
+st.write("Escribe tu guion en inglés, tradúcelo y genera una voz humana profesional para tus casos.")
 
-# Barra lateral para ingresar tu clave secreta de API
+# Barra lateral para configuraciones
 with st.sidebar:
     st.header("🔑 Configuración")
-    api_token = st.text_input("Ingresa tu API Token de Replicate:", type="password")
-    st.info("Obtén tu token en replicate.com/account/api-tokens")
+    openai_key = st.text_input("Ingresa tu OpenAI API Key:", type="password")
+    st.info("Obtén tu API Key en platform.openai.com/api-keys")
+    
+    st.markdown("---")
+    # Selección de voz
+    st.subheader("🗣️ Elige el tono de voz")
+    voz_seleccionada = st.selectbox(
+        "Voces disponibles:",
+        ("onyx", "echo", "fable", "alloy", "nova", "shimmer"),
+        help="Onyx y Echo son excelentes voces graves para misterio."
+    )
 
-# Área de texto para la idea del usuario
-prompt_usuario = st.text_area(
-    "Escribe la idea para tu video:", 
-    placeholder="Ej: Un coche deportivo del futuro conduciendo por una ciudad de noche con luces neón...",
-    height=120
+# Área principal
+guion_ingles = st.text_area(
+    "1. Escribe tu guion en Inglés:", 
+    placeholder="Ej: The case remained unsolved for 20 years, until one night...",
+    height=150
 )
 
-# Botón principal
-if st.button("🚀 Generar Video"):
-    if not api_token:
-        st.error("⚠️ Por favor ingresa tu API Token de Replicate en la barra lateral izquierda.")
-    elif not prompt_usuario:
-        st.warning("⚠️ Escribe una idea antes de generar.")
-    else:
-        try:
-            client = replicate.Client(api_token=api_token)
-            st.info("🧠 Procesando tu prompt y conectando con los servidores de video...")
-            
-            with st.spinner("Generando clip de video con IA... (esto toma entre 1 y 2 minutos)"):
-                output = client.run(
-                    "minimax/video-01",
-                    input={
-                        "prompt": prompt_usuario,
-                        "prompt_optimizer": True
-                    }
-                )
-                
-                st.success("¡Tu video está listo!")
-                st.video(output)
-                
-        except Exception as e:
-            st.error(f"Ocurrió un error al procesar el video: {str(e)}")
+col1, col2 = st.columns(2)
+
+# Columna de Traducción
+with col1:
+    if st.button("🇺🇸 ➡️ 🇪🇸 Traducir Guion al Español Neutro"):
+        if not openai_key:
+            st.error("⚠️ Falta tu API Key de OpenAI.")
+        elif not guion_ingles:
+            st.warning("⚠️ Escribe el guion primero.")
+        else:
+            with st.spinner("Traduciendo como un experto..."):
+                try:
+                    client = OpenAI(api_key=openai_key)
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "Eres un narrador experto de misterio. Traduce este texto al español neutro manteniendo el tono de suspenso y documental."},
+                            {"role": "user", "content": guion_ingles}
+                        ]
+                    )
+                    st.session_state['traduccion'] = response.choices[0].message.content
+                    st.success("¡Traducción lista!")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+guion_espanol = st.session_state.get('traduccion', "")
+
+if guion_espanol:
+    st.text_area("2. Guion en Español:", value=guion_espanol, height=150, disabled=True)
+
+# Columna de Audio
+with col2:
+    if st.button("🎙️ Generar Pista de Audio"):
+        if not openai_key:
+            st.error("⚠️ Falta tu API Key de OpenAI.")
+        elif not guion_espanol:
+            st.warning("⚠️ Necesitas traducir un guion primero.")
+        else:
+            with st.spinner("Grabando voz... (esto es muy rápido)"):
+                try:
+                    client = OpenAI(api_key=openai_key)
+                    response = client.audio.speech.create(
+                        model="tts-1",
+                        voice=voz_seleccionada,
+                        input=guion_espanol
+                    )
+                    
+                    audio_path = "narracion.mp3"
+                    response.stream_to_file(audio_path)
+                    
+                    st.success("¡Pista de audio lista para descargar!")
+                    st.audio(audio_path)
+                    
+                    with open(audio_path, "rb") as file:
+                        st.download_button(
+                            label="📥 Descargar MP3",
+                            data=file,
+                            file_name="narracion_caso.mp3",
+                            mime="audio/mp3",
+                            use_container_width=True
+                        )
+                except Exception as e:
+                    st.error(f"Error: {e}")
